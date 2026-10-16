@@ -1,6 +1,6 @@
 """Output parser — a stream of screen snapshots into deltas and a result.
 
-The :class:`Screen` emulator (previous slice) turns raw pty bytes into a stable
+The :class:`Screen` emulator turns raw pty bytes into a stable
 picture of what the terminal would show. This module is the next layer up: it
 consumes a *stream* of those pictures (one :meth:`Screen.display` string per
 feed) and answers two questions the rest of the SDK cares about:
@@ -124,8 +124,9 @@ class Parser:
     It does *not* reconstruct text that has scrolled off the top of the screen;
     a query whose output exceeds the pty height will lose the scrolled portion
     from :attr:`response`. Size the pty tall enough (``Cadence.winsize``) for the
-    expected output, or treat very long answers as out of scope for this
-    backend — the same observability caveat the proposal records.
+    expected output, or treat very long answers as out of scope. This is a
+    known observability limit of driving the CLI through a pty, which only
+    ever exposes the visible screen.
     """
 
     def __init__(self, markers: ParserMarkers = DEFAULT_MARKERS) -> None:

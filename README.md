@@ -1,6 +1,6 @@
 # maestro_sdk
 
-A Python SDK that drives the `claude` Claude Code CLI **as if it were a human user**: paced keystrokes, realistic terminal allocation, post-response heartbeat, strictly sequential flow.
+A Python SDK that drives the interactive `claude` (Claude Code) TUI through a real pseudo-terminal, typing at a configurable human-like cadence, so you can exercise and automate the CLI the way a person uses it: paced keystrokes, realistic terminal allocation, post-response heartbeat, strictly sequential flow.
 
 [![CI](https://github.com/thomas-sodon/maestro-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/thomas-sodon/maestro-sdk/actions/workflows/ci.yml)
 
@@ -12,13 +12,15 @@ This is not "another way to call the Claude API". It is a way to exercise the CL
 
 - You want to surface TUI/UX issues that bulk-write SDKs hide.
 - You're building automation on a `claude` CLI + OAuth login with no `ANTHROPIC_API_KEY`.
-- Downstream rate-limiters / UI state machines assume between-keystroke time.
+- You need to reproduce timing-sensitive TUI behaviour (repaints, approval modals, idle prompts).
+
+Pacing does not raise or get around any usage limit: the CLI's own limits still apply, and rate-limit notices surface as `RateLimitError` when a `ClientMarkers.rate_limit` marker is configured. Use is subject to Anthropic's terms.
 
 ## Status
 
-Early, experimental, and used in anger only behind an opt-in provider. What exists:
+Early, experimental, and used only behind an opt-in provider in maestro-agent. What exists:
 
-- **Foundation** — `Cadence` (all timing), typed errors with a stable `category`, the `QueryOptions` / `QueryResult` data contracts.
+- **Foundation** — `Cadence` (all pacing), typed errors with a stable `category`, the `QueryOptions` / `QueryResult` data contracts.
 - **Terminal layer** — `PtyRunner` (spawn, paced keystrokes, `SIGTERM` → `SIGKILL` teardown) and `Screen`, a deliberately small vt100-subset emulator.
 - **Interpretation** — `Parser` (snapshots → thinking/answer deltas and tool calls) and `ApprovalHandler` (deny-by-default approval modals).
 - **Client** — `AsyncClient` for one-shot queries and `Session`, a persistent runner across turns that respawns with `--resume <id>` so continuity survives an EOF or a crash. A session id can also be pinned at spawn.
@@ -39,7 +41,7 @@ c.heartbeat_for(answer_chars=350)  # seconds to wait after a 350-char response
 c.winsize()                        # (cols, rows) — realistic, jittered
 ```
 
-The `Cadence` object owns every timing constant in the package. There is no `sleep(...)` call anywhere else — if you want different rhythm, pass a different `Cadence`.
+The `Cadence` object owns every pacing decision in the package (keystroke delays, the post-response heartbeat, the terminal size) — if you want different rhythm, pass a different `Cadence`. Safety timeouts (the startup and stream-idle timeouts, the kill grace on teardown, the `claude --version` probe) are separate and live with the code that enforces them.
 
 For tests, `InstantCadence` returns zero for every delay:
 
@@ -53,7 +55,7 @@ c = InstantCadence()  # all delays are zero; winsize is deterministic
 The `claude` CLI repaints its terminal rather than appending text. `Screen` is a
 minimal vt100-subset emulator (cursor moves, ED/EL erasure, scroll region, SGR
 discarded) that turns a raw byte stream into the text a terminal would show, so
-a later parser can tell incremental streaming apart from a full re-render.
+`Parser` can tell incremental streaming apart from a full re-render.
 
 ```python
 from maestro_sdk import Screen
@@ -148,7 +150,7 @@ ApprovalHandler(markers, policy=approve_all).resolve(snapshot)  # -> "1"
 Like the parser, it ships the **mechanism** and leaves the **markers** to
 configuration; the default `ApprovalMarkers()` matches nothing, so no snapshot is
 ever read as a modal. It is pure: `detect` is a function of one snapshot and
-`resolve` a function of the request and the policy. The client slice sends the
+`resolve` a function of the request and the policy. `AsyncClient` sends the
 returned keystrokes through the pty and waits for the modal to clear. A
 sophisticated per-tool policy (rather than the blanket `approve_all`) is left to a
 later change so the trust chain stays explicit.
@@ -205,8 +207,26 @@ types.
 
 ## Install
 
+### Use
+
+Requirements:
+
+- Python 3.14+.
+- A POSIX OS with a pty: Linux (CI runs on Ubuntu). macOS is untested; Windows is unsupported.
+- The `claude` CLI on `PATH` and logged in.
+
 ```bash
-python3.14 -m pip install -e .[dev]
+python3.14 -m pip install "git+https://github.com/thomas-sodon/maestro-sdk"
+```
+
+### Develop
+
+```bash
+git clone https://github.com/thomas-sodon/maestro-sdk
+cd maestro-sdk
+python3.14 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
 ```
 
 ## Quality gates

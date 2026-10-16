@@ -13,23 +13,19 @@ crash) the child is spent, so the next turn spawns fresh — which would otherwi
 start a blank conversation. A session created with ``resume`` spawns
 ``claude --resume <id>`` from the first turn, and every turn updates the stored id
 from the CLI-reported :attr:`~maestro_sdk.QueryResult.session_id`, so a respawn
-reconnects to the same transcript rather than losing it. A session created with
-``session_id`` instead *pins* a fresh id (proposal 081): its first spawn runs
-``claude --session-id <id>`` (creating the session under that id) and that pinned
-id floors every turn's reported id, so the first turn refreshes the stored id to
-it and any respawn reconnects with ``--resume <id>`` — continuity with no on-screen
-id to scrape. ``resume`` and ``session_id`` are mutually exclusive. An
-``initial_prompt`` is sent as the session's first turn (ahead of the caller's
-first :meth:`query` prompt), mirroring the Anthropic provider's connect-time seed
-message.
+reconnects to the same transcript rather than losing it.
 
-**A spawn-pinned id needs no on-screen marker (proposal 081).** A session created
-with ``session_id`` instead registers a caller-chosen id at the *first* spawn
-(``claude --session-id <id>``), reports that id on every turn's
-:attr:`~maestro_sdk.QueryResult.session_id` even with no marker configured, and
-reuses it as ``--resume <id>`` on a respawn — so continuity (and the transcript
-sidecar metering keyed on the id) work on a layout that paints no session-id line.
-``resume`` and ``session_id`` are mutually exclusive.
+**A spawn-pinned id needs no on-screen marker.** A session created with
+``session_id`` instead registers a caller-chosen id at the *first* spawn
+(``claude --session-id <id>``). That pinned id floors every turn's
+:attr:`~maestro_sdk.QueryResult.session_id`, so it is reported even with no
+marker configured, and a respawn reconnects with ``--resume <id>`` — so
+continuity (and any external metering keyed on the session id) works on a
+layout that paints no session-id line. ``resume`` and ``session_id`` are
+mutually exclusive.
+
+An ``initial_prompt`` is sent as the session's first turn (ahead of the caller's
+first :meth:`query` prompt), mirroring a connect-time seed message.
 
 **Turn boundaries decide reuse.** :meth:`AsyncClient._drive_turn` reports whether
 a turn ended on EOF (the child exited) or on the configured
@@ -80,7 +76,7 @@ class Session:
         # Pending seed turn, sent ahead of the caller's first prompt and cleared
         # once delivered so it never re-fires on a later query.
         self._initial_prompt = initial_prompt
-        # The spawn-pinned id (proposal 081): when set, the *first* spawn creates
+        # The spawn-pinned id: when set, the *first* spawn creates
         # the session with ``--session-id <id>`` and floors every turn's reported id.
         # ``None`` leaves spawns bare.
         self._pin_session_id = session_id
@@ -101,7 +97,7 @@ class Session:
         spawned with whichever options drive the turn that first brings it up.
         Only per-turn streaming bounds (``startup_timeout_seconds`` /
         ``stream_idle_timeout_seconds``) take effect on a *reused* runner —
-        spawn-time fields (``cwd``, ``system``) bind at the first spawn and are
+        spawn-time fields (``cwd``) bind at the first spawn and are
         ignored by later turns, since the child they would configure already exists.
 
         A pending ``initial_prompt`` is delivered as a preceding turn the first
@@ -199,7 +195,7 @@ class Session:
             self._client._warn_if_instant()
             if self._pin_session_id is not None and not self._has_spawned:
                 # First spawn of a pinned session: register the caller-chosen id
-                # with --session-id (proposal 081). Later respawns fall to the
+                # with --session-id. Later respawns fall to the
                 # --resume branch, since _resume_id is seeded/updated to the pin.
                 runner = self._client._spawn(opts, session_id=self._pin_session_id)
             else:
@@ -277,7 +273,7 @@ class Session:
         ``finally`` guarantees the slot clears whether or not ``aclose()`` fails,
         while the teardown exception (or, on the error paths, the in-flight
         exception it becomes the ``__context__`` of) still propagates loudly —
-        nothing is swallowed, so the fail-loud invariant holds.
+        nothing is swallowed.
         """
         try:
             await runner.aclose()
@@ -295,7 +291,7 @@ class Session:
         # Reap the live child through the shared _reap_and_clear helper so a raising
         # aclose() (a non-EIO OSError or a teardown CancelledError) still propagates
         # but never leaves the broken runner installed on the closed session,
-        # mirroring the turn/probe reap sites (issue #2400).
+        # mirroring the turn/probe reap sites.
         runner = self._runner
         if runner is not None:
             await self._reap_and_clear(runner)

@@ -1,9 +1,24 @@
 [project]
 name = "maestro_sdk"
 version = "0.0.1"
-description = "A Claude Code CLI-driving SDK that talks to claude as if it were a human user (paced keystrokes, realistic terminal, heartbeat)."
+description = "Drive the interactive Claude Code (claude) TUI through a real pty at a human-like typing cadence, for TUI/UX testing and OAuth-CLI automation."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Thomas Sodon" }]
 requires-python = ">=3.14"
 dependencies = []
+keywords = ["claude", "claude-code", "cli", "pty", "terminal", "tui", "testing", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: POSIX",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Repository = "https://github.com/thomas-sodon/maestro-sdk"
+Issues = "https://github.com/thomas-sodon/maestro-sdk/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -16,14 +31,14 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools>=68.0"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# PEP 561: ship the inline type marker so downstreams (e.g. maestro's
-# providers.cli_paced provider) type-check against maestro_sdk's real types.
+# PEP 561: ship the inline type marker so downstreams (e.g. Maestro's
+# cli_paced provider) type-check against maestro_sdk's real types.
 [tool.setuptools.package-data]
 maestro_sdk = ["py.typed"]
 

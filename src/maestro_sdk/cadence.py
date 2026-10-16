@@ -5,11 +5,14 @@ Everything that makes this SDK *human-paced* lives here:
 * per-key typing delay, drawn from a clamped Gaussian with word/sentence
   pauses and an occasional "thinking pause";
 * post-response heartbeat scaled to answer length;
-* pty winsize, randomised per session so the CLI cannot detect a fixed shape.
+* pty winsize, jittered per session so layout handling is exercised across
+  realistic terminal sizes.
 
-There is no ``sleep`` call anywhere else in the package — every wait in the
-package routes through ``delay_for`` or ``heartbeat_for``. Cadence is frozen
-once constructed: tests that need different rhythm construct a fresh instance.
+Cadence owns every pacing decision: every deliberate wait in the package
+routes through ``delay_for`` or ``heartbeat_for``. Safety timeouts (the
+startup and stream-idle timeouts, the kill grace, the version probe) are
+separate and live with the code that enforces them. Cadence is frozen once
+constructed: tests that need different rhythm construct a fresh instance.
 """
 
 from __future__ import annotations
@@ -68,7 +71,7 @@ class Cadence:
         additional uniform pause in ``thinking_pause_ms`` is added — modelling
         the operator pausing to think mid-sentence.
         """
-        del char  # reserved for per-character variation in a future slice; do not remove
+        del char  # reserved for future per-character variation; do not remove
         delay_ms = max(self.min_key_ms, self._rng.gauss(self.mean_key_ms, self.stddev_key_ms))
         if prev in _WORD_BOUNDARIES:
             delay_ms += self.word_pause_ms

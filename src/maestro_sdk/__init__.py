@@ -1,4 +1,4 @@
-"""maestro_sdk — a CLI-driving Claude SDK that paces interaction like a human user.
+"""maestro_sdk — drive the interactive ``claude`` CLI through a pty at human-like cadence.
 
 This ships the foundation layer (Cadence, errors, types), the screen emulator,
 the pty runner, the output parser, the approval handler, the public

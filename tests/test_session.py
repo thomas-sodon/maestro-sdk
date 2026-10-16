@@ -286,7 +286,7 @@ async def test_aclose_double_fault_clears_slot_and_stays_idempotent() -> None:
     # aclose() reaps the live child at session close; if that reap's own aclose()
     # raises (a non-EIO OSError or a teardown CancelledError), the slot must still
     # be cleared *before* the reap so the broken runner is never left installed on
-    # the closed session (issue #2400). The raise propagates, but the slot is clear,
+    # the closed session. The raise propagates, but the slot is clear,
     # so a second aclose() reaps nothing — the reorder makes close idempotent even
     # when the reap itself fails.
     markers = ClientMarkers(idle=("READY",))
@@ -462,7 +462,7 @@ async def test_double_fault_mid_turn_clears_slot_and_respawns() -> None:
     # raising aclose() must not strand the broken runner in the slot: the slot is
     # cleared before the reap, so even when aclose() blows up the exception still
     # propagates and the next query spawns fresh instead of driving a dead child
-    # whose master fd aclose already closed (issue #2400). The propagating error is
+    # whose master fd aclose already closed. The propagating error is
     # the aclose failure, with the original mid-turn error chained as __context__.
     boom = FakeRunner(
         [b"x", _EOF],
@@ -506,7 +506,7 @@ async def test_double_fault_on_eof_reap_clears_slot_and_respawns() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Resume + initial prompt + session-id capture (proposal 061 Step 2)
+# Resume + initial prompt + session-id capture
 
 
 async def test_resume_initial_prompt_and_session_id_capture() -> None:
@@ -671,7 +671,7 @@ async def test_session_id_last_match_wins_within_snapshot() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Spawn-pinned session id (proposal 081)
+# Spawn-pinned session id
 
 
 async def test_pinned_session_spawns_with_session_id_then_resumes() -> None:
@@ -829,7 +829,7 @@ async def test_session_id_captured_before_session_expired_is_preserved_in_resume
 
 
 # ---------------------------------------------------------------------------
-# Spawn-pinned session id (proposal 081 Step 2)
+# Spawn-pinned session id across quiescent turns
 
 
 async def test_pinned_session_id_spawns_and_reports_across_quiescent_turns() -> None:
@@ -891,7 +891,7 @@ async def test_resume_and_session_id_are_mutually_exclusive() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Slash-command metrics probe (proposal 062 Step 1)
+# Slash-command metrics probe
 
 
 async def test_run_command_probes_live_runner_and_leaves_state_unchanged() -> None:
@@ -1005,7 +1005,7 @@ async def test_run_command_double_fault_clears_slot_and_respawns() -> None:
     # aclose() raises. As on a turn, the slot is cleared before the reap, so a
     # failing aclose() cannot strand the broken runner — the raise propagates and
     # the next query respawns from the untouched resume id instead of driving a
-    # dead child (issue #2400). The mid-probe error is chained as __context__.
+    # dead child. The mid-probe error is chained as __context__.
     runner1 = FakeRunner([b"a\r\nREADY", _TIMEOUT], aclose_error=RuntimeError("teardown blew up"))
     runner2 = FakeRunner([b"a2\r\nREADY"])
     markers = ClientMarkers(idle=("READY",))
@@ -1029,7 +1029,7 @@ async def test_run_command_double_fault_on_eof_clears_slot_and_respawns() -> Non
     # A probe that ends on EOF reaps the spent child; if that reap's aclose() raises,
     # the slot must be cleared *before* the reap so the dead runner (its master fd
     # already closed) is never left installed — the raise propagates and the next
-    # query respawns instead of driving a corpse (issue #2400). Mirrors the mid-probe
+    # query respawns instead of driving a corpse. Mirrors the mid-probe
     # double-fault, but on the EOF/early-exit reap branch of run_command.
     runner1 = FakeRunner(
         [b"a\r\nREADY", b"COST", _EOF],
@@ -1088,7 +1088,7 @@ async def test_run_command_without_live_runner_raises() -> None:
 
 
 async def test_double_fault_turn_clears_runner_when_aclose_raises() -> None:
-    # The exact scenario the issue describes: the turn fails (send_text raises)
+    # Double-fault scenario: the turn fails (send_text raises)
     # AND the reap that follows fails (aclose raises). The slot must still clear —
     # the try/finally guarantees self._runner is None so the next query spawns
     # fresh — while the teardown exception surfaces rather than being swallowed.

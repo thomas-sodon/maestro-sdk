@@ -25,10 +25,10 @@ def test_query_options_defaults_are_safe() -> None:
     assert opts.startup_timeout_seconds > 0
     assert opts.stream_idle_timeout_seconds > 0
     # Output-quiescence completion is opt-in: None leaves the read loop on its
-    # EOF / idle-marker / complete_on done-signals only (proposal 081).
+    # EOF / idle-marker / complete_on done-signals only.
     assert opts.idle_quiescence_seconds is None
     # Spawn-pinned session id is opt-in: None leaves the spawn command bare and
-    # the reported id sourced only from an on-screen marker (proposal 081).
+    # the reported id sourced only from an on-screen marker.
     assert opts.session_id is None
 
 

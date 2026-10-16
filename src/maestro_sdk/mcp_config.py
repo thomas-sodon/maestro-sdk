@@ -1,19 +1,19 @@
-"""``--mcp-config`` JSON builder for the ``claude`` CLI (proposal 061 Step 4).
+"""``--mcp-config`` JSON builder for the ``claude`` CLI.
 
 The ``claude`` CLI reaches MCP servers through a ``--mcp-config <file>`` flag
 whose payload is plain JSON: a top-level ``{"mcpServers": {<name>: <spec>}}``
 object where each *spec* describes one server. For an stdio server the spec is
 ``{"command": str, "args": [str, ...], "env": {str: str}}`` — the same
-``command`` / ``args`` / ``env`` shape :meth:`maestro.config.Config.mcp_servers_config`
-already produces for the agent path.
+``command`` / ``args`` / ``env`` shape Maestro's own MCP server config
+(thomas-sodon/maestro-agent) already produces for its agent path.
 
 This module is the **config-generation** seam, deliberately nothing more. It
 builds and serialises that JSON and knows the wire format; it does *not* spawn
 the CLI, host a server, or speak MCP. Keeping it pure JSON honours
 :mod:`maestro_sdk`'s zero-dependency posture (it imports neither ``mcp`` nor
-``maestro``), so the provider-side adapter
-(:mod:`maestro.providers.cli_paced_tool_adapter`) can assemble a registry into
-a ``--mcp-config`` without dragging a transport dependency into the SDK.
+``maestro``), so a caller (Maestro's ``cli_paced`` provider, for one) can
+assemble a server registry into a ``--mcp-config`` without dragging a
+transport dependency into the SDK.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 #: Top-level key the ``claude`` CLI reads server specs from in a ``--mcp-config``
-#: payload. A constant so the adapter and its tests pin the same spelling.
+#: payload. A constant so callers and tests pin the same spelling.
 MCP_SERVERS_KEY = "mcpServers"
 
 
@@ -38,9 +38,8 @@ def stdio_server(
     ``command`` is always emitted; ``args`` and ``env`` are included only when
     provided, so a bare ``stdio_server("cmd")`` produces ``{"command": "cmd"}``
     rather than a spec padded with empty collections. Mirrors the
-    ``{command, args, env}`` shape :meth:`maestro.config.Config.mcp_servers_config`
-    emits for the agent path, so external MCP entries fold in unchanged
-    (proposal 061 Step 5).
+    ``{command, args, env}`` shape Maestro's MCP server config emits for its
+    agent path, so external MCP entries fold in unchanged.
     """
     spec: dict[str, Any] = {"command": command}
     if args is not None:

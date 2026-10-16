@@ -1,4 +1,4 @@
-"""Per-CLI-version marker packs: one frozen bundle of every marker family (proposal 075).
+"""Per-CLI-version marker packs: one frozen bundle of every marker family.
 
 The driver modules each split *mechanism* from *configuration*: the client,
 parser, approval handler, and slash-probe extractor ship the machinery, and the
@@ -19,8 +19,7 @@ the empty defaults, exactly today's behaviour, rather than parsing a layout the
 pack was never tested against. :func:`detect_cli_version` is the probe half:
 a bounded, read-only ``claude --version`` subprocess whose every failure mode
 (missing binary, non-zero exit, timeout, unparseable output) degrades to
-``None`` rather than raising, mirroring the discipline of Maestro's
-``claude auth status`` login probe.
+``None`` rather than raising.
 
 Version ranges compare as dotted-numeric tuples, element-wise and inclusive at
 both ends. The comparison is plain tuple ordering, so a shorter bound acts as a
@@ -44,8 +43,8 @@ from maestro_sdk.slash_probe import DEFAULT_PROBE_MARKERS, SlashProbeMarkers
 # First dotted-numeric run in `claude --version` output ("2.1.172 (Claude Code)").
 _VERSION_RE = re.compile(r"\d+(?:\.\d+)+")
 
-# Bound on the --version probe, mirroring maestro's `claude auth status` probe:
-# a wedged binary degrades to "version unknown", never a blocked startup.
+# Bound on the --version probe: a wedged binary degrades to "version unknown",
+# never a blocked startup.
 _PROBE_TIMEOUT_SECONDS = 10.0
 
 
@@ -115,8 +114,8 @@ class MarkerPack:
         )
 
 
-# Registered packs, oldest-first by convention. Step 6 of proposal 075 ships the
-# first real pack; an empty registry keeps select_marker_pack honestly pack-less.
+# Registered packs, oldest-first by convention. No pack is registered yet; an
+# empty registry keeps select_marker_pack honestly pack-less.
 MARKER_PACKS: tuple[MarkerPack, ...] = ()
 
 
@@ -125,9 +124,9 @@ def get_marker_pack(
 ) -> MarkerPack | None:
     """Look up a registered pack by exact name; ``None`` when absent.
 
-    The caller decides whether absence is an error: Maestro's config validation
-    fails loud on an unknown *operator-named* pack (a typo must not silently
-    mean "no markers"), while ``"auto"`` selection never goes through names.
+    The caller decides whether absence is an error: a caller that lets a user
+    name a pack should reject an unknown name (a typo must not silently mean
+    "no markers"), while ``"auto"`` selection never goes through names.
     """
     for pack in MARKER_PACKS if packs is None else packs:
         if pack.name == name:
@@ -168,10 +167,9 @@ def select_marker_pack(
 def detect_cli_version(command: Sequence[str] = ("claude",)) -> str | None:
     """Probe ``<command> --version`` and return the dotted version, or ``None``.
 
-    Read-only and bounded (:data:`_PROBE_TIMEOUT_SECONDS`), mirroring Maestro's
-    ``claude auth status`` login-probe discipline. Every failure mode — empty
-    *command*, missing binary, OS error, timeout, non-zero exit, or output with
-    no dotted-numeric run — returns ``None`` so selection degrades to no-pack
+    Read-only and bounded (:data:`_PROBE_TIMEOUT_SECONDS`). Every failure mode —
+    empty *command*, missing binary, OS error, timeout, non-zero exit, or output
+    with no dotted-numeric run — returns ``None`` so selection degrades to no-pack
     rather than guessing; converting those specific errors into the documented
     "version unknown" verdict is the contract here, not a silenced defect.
     """

@@ -2,7 +2,7 @@
 
 The CLI repaints its terminal: it does not append text, it moves the cursor,
 erases regions, and re-renders. To tell *incremental streaming* apart from a
-*re-render*, the parser (a later slice) needs a stable picture of what the
+*re-render*, the :class:`Parser` needs a stable picture of what the
 terminal would show, not the raw byte stream. This module is that picture.
 
 It is deliberately a *subset*: cursor movement, ED/EL erasure, the scroll

@@ -1,9 +1,10 @@
 """Public client — composes the runner, screen, parser, and approvals into a query.
 
-This is the top of the stack: the slices below it (pty runner, screen emulator,
-output parser, approval handler) each do one thing; :class:`AsyncClient` wires
-them into the single operation the rest of the world wants — *type a prompt at
-human cadence, watch the CLI answer, hand back a result.*
+This is the top of the stack: the layers below it (:class:`PtyRunner`,
+:class:`Screen`, :class:`Parser`, :class:`ApprovalHandler`) each do one thing;
+:class:`AsyncClient` wires them into the single operation the rest of the world
+wants — *type a prompt at human cadence, watch the CLI answer, hand back a
+result.*
 
 A query runs as a strict sequence, each step timed so a caller can prove the
 pacing happened (:class:`QueryTiming`):
@@ -79,12 +80,12 @@ _SUBMIT_KEY = "\r"
 # conversation rather than starting fresh.
 _RESUME_FLAG = "--resume"
 
-# The CLI flag that pins a brand-new session to a caller-chosen id at spawn
-# (proposal 081). A one-shot query (via :attr:`QueryOptions.session_id`) or a
-# session (via ``create_session(session_id=…)``) prepends ``--session-id <id>``
-# so the id is known *a priori* rather than scraped off a screen that may never
-# paint it; a session respawn then reconnects with ``_RESUME_FLAG`` instead, so
-# the two flags are mutually exclusive on any single spawn (``--resume`` wins).
+# The CLI flag that pins a brand-new session to a caller-chosen id at spawn. A
+# one-shot query (via :attr:`QueryOptions.session_id`) or a session (via
+# ``create_session(session_id=…)``) prepends ``--session-id <id>`` so the id is
+# known *a priori* rather than scraped off a screen that may never paint it; a
+# session respawn then reconnects with ``_RESUME_FLAG`` instead, so the two flags
+# are mutually exclusive on any single spawn (``--resume`` wins).
 _SESSION_ID_FLAG = "--session-id"
 
 
@@ -134,9 +135,9 @@ class ClientMarkers:
       onto :attr:`QueryResult.session_id` so a later turn can ``--resume`` it.
       Empty by default (no id is extracted), since the id glyph is CLI-version
       specific — the same mechanism-plus-configuration split as the other fields.
-      Even when empty, a spawn-pinned id (proposal 081, via
-      :attr:`QueryOptions.session_id` / ``create_session(session_id=…)``) still
-      populates the result as the *floor* an on-screen capture here overrides.
+      Even when empty, a spawn-pinned id (via :attr:`QueryOptions.session_id` /
+      ``create_session(session_id=…)``) still populates the result as the *floor*
+      an on-screen capture here overrides.
     """
 
     idle: tuple[str, ...] = ()
@@ -187,9 +188,9 @@ class AsyncClient:
         self._markers = client_markers
         self._env = dict(env) if env is not None else None
         self._runner_factory = runner_factory or self._default_runner_factory
-        # Layout-drift sentinel (proposal 075): one-shot latch so the
-        # idle-marker-missed WARNING fires once per client, not once per turn —
-        # the drift is a property of the CLI layout, not of any single turn.
+        # Layout-drift sentinel: one-shot latch so the idle-marker-missed WARNING
+        # fires once per client, not once per turn — the drift is a property of
+        # the CLI layout, not of any single turn.
         self._idle_drift_warned = False
 
     # -- public surface ----------------------------------------------------
@@ -201,7 +202,7 @@ class AsyncClient:
 
         ``options`` overrides the client's defaults for this call only.
 
-        ``session_id`` pins a caller-chosen id at spawn (proposal 081): when set,
+        ``session_id`` pins a caller-chosen id at spawn: when set,
         the runner spawns ``claude --session-id <id>`` and the returned
         :attr:`QueryResult.session_id` is that id even with no
         :attr:`ClientMarkers.session_id` marker configured — the pinned id is the
@@ -234,7 +235,7 @@ class AsyncClient:
 
         ``resume`` is a CLI session id: when set, the session spawns
         ``claude --resume <id>`` so the child reconnects to that prior transcript.
-        ``session_id`` instead *pins a fresh* id (proposal 081): the first spawn
+        ``session_id`` instead *pins a fresh* id: the first spawn
         runs ``claude --session-id <id>`` (creating the session under that id),
         every turn's :attr:`QueryResult.session_id` reports it with no on-screen
         marker (the floor), and any respawn reconnects with ``--resume <id>``.
@@ -242,9 +243,9 @@ class AsyncClient:
         existing transcript and creating a new pinned one are contradictory — and
         passing both raises :class:`ValueError`.
         ``initial_prompt``, when set, is sent as the session's first turn (ahead
-        of the caller's first :meth:`Session.query` prompt), mirroring the
-        Anthropic provider's connect-time seed message. All default to ``None``,
-        which leaves the one-shot-equivalent spawn untouched.
+        of the caller's first :meth:`Session.query` prompt), mirroring a
+        connect-time seed message. All default to ``None``, which leaves the
+        one-shot-equivalent spawn untouched.
         """
         return Session(self, initial_prompt=initial_prompt, resume=resume, session_id=session_id)
 
@@ -261,7 +262,7 @@ class AsyncClient:
         When ``resume`` is set, ``--resume <id>`` is appended so the child
         reconnects to that transcript. Otherwise, when ``session_id`` is set, a
         ``--session-id <id>`` pins a *fresh* session to that caller-chosen id at
-        spawn (proposal 081). ``resume`` wins when both are set: a session's first
+        spawn. ``resume`` wins when both are set: a session's first
         spawn creates the pinned id with ``--session-id`` and its respawns
         reconnect with ``--resume`` once an id has been captured/floored, so the
         two never need to coexist on one command. With neither set the bare
@@ -293,11 +294,13 @@ class AsyncClient:
             await runner.aclose()
 
     def _warn_if_instant(self) -> None:
-        """Log once, loudly, if driving a real CLI with a pacing-defeating cadence.
+        """Log a WARNING if driving a real CLI with a pacing-defeating cadence.
 
-        An :class:`InstantCadence` zeroes every pacing delay; shipping one to a
-        real CLI defeats the entire point of this package, so say so rather than
-        silently behaving like a bulk-write SDK.
+        Called on every one-shot query and every session spawn, so the warning
+        repeats for as long as the cadence is in use. An :class:`InstantCadence`
+        zeroes every pacing delay; shipping one to a real CLI defeats the entire
+        point of this package, so say so rather than silently behaving like a
+        bulk-write SDK.
         """
         if isinstance(self._cadence, InstantCadence):
             _log.warning("AsyncClient is driving the CLI with InstantCadence: all pacing delays are zero")
@@ -323,11 +326,13 @@ class AsyncClient:
         child is alive but mid-generation). A session reaps the runner on *either*
         flag — both mean the child cannot safely serve another turn.
 
-        ``pinned_session_id``, when set, is the spawn-pinned id (proposal 081):
-        it becomes :attr:`QueryResult.session_id` whenever no on-screen marker
-        captured one this turn — the pinned id is the *floor*, so an extracted id
-        still overrides it. ``None`` keeps today's "id only from a marker"
-        behaviour, leaving the result id ``None`` when nothing was captured.
+        ``pinned_session_id`` is a caller-chosen id pinned at spawn. It is the
+        **floor** for the result's session id: when streaming captured no
+        on-screen :attr:`ClientMarkers.session_id`, the result reports the pinned
+        id so a spawn-pinned caller has an id without the layout ever painting
+        one. An on-screen capture still wins for the turn (the pin is a floor,
+        not a ceiling); ``None`` leaves the result id exactly what streaming
+        produced.
 
         ``_session_id_out``, when provided, is a one-element list updated in-place
         each time a CLI-reported session id is seen during streaming.  Because the
@@ -335,13 +340,6 @@ class AsyncClient:
         is accessible to the caller even when the method raises instead of
         returning — enabling :class:`Session._run_turn` to preserve ``_resume_id``
         across a :class:`RateLimitError` or :class:`SessionExpiredError`.
-
-        ``pinned_session_id`` is a caller-chosen id pinned at spawn (proposal 081).
-        It is the **floor** for the result's session id: when streaming captured no
-        on-screen :attr:`ClientMarkers.session_id`, the result reports the pinned id
-        so a spawn-pinned caller has an id without the layout ever painting one. An
-        on-screen capture still wins for the turn (the pin is a floor, not a
-        ceiling); ``None`` leaves the result id exactly what streaming produced.
         """
         screen = Screen(*runner.winsize)
         parser = Parser(self._parser_markers)
@@ -350,11 +348,11 @@ class AsyncClient:
             runner, screen, parser, options, _session_id_out=_session_id_out
         )
         if session_id is None:
-            # No on-screen id matched this turn → fall back to the spawn-pinned id
-            # (proposal 081); ``None`` when nothing was pinned, leaving today's id.
+            # No on-screen id matched this turn → fall back to the spawn-pinned id;
+            # ``None`` when nothing was pinned.
             session_id = pinned_session_id
         heartbeat_ms = await self._heartbeat(len(parser.response))
-        # Layout-drift sentinel (proposal 075): a configured idle marker that
+        # Layout-drift sentinel: a configured idle marker that
         # never matched before EOF means the marker no longer fits the CLI's
         # painted layout (e.g. a CLI upgrade). EOF stays the honest fallback
         # done-signal — the turn is valid — but the degradation is recorded on
@@ -375,9 +373,7 @@ class AsyncClient:
             response=parser.response,
             tool_calls=parser.tool_calls,
             usage=None,
-            # The spawn-pinned id is the floor: an on-screen marker capture wins,
-            # else fall back to the pinned id (proposal 081), else None.
-            session_id=session_id if session_id is not None else pinned_session_id,
+            session_id=session_id,
             raw_screen=screen.display(),
             timing=QueryTiming(send_ms=send_ms, stream_ms=stream_ms, heartbeat_ms=heartbeat_ms),
             idle_marker_missed=idle_marker_missed,
@@ -437,7 +433,7 @@ class AsyncClient:
         the idle marker (keep the child).
 
         ``options.idle_quiescence_seconds``, when set and no idle marker is
-        configured, adds a **fourth completion outcome** (proposal 081): the turn is
+        configured, adds a **fourth completion outcome**: the turn is
         complete once the rendered ``screen.display()`` snapshot has stopped changing
         for the window while the child is alive — the same shape as the idle break
         (``ended_on_eof`` and ``exited_early`` both left ``False``, child clean and
@@ -457,7 +453,7 @@ class AsyncClient:
         # Identity of the approval modal we last answered, so a repaint of the
         # same modal before the CLI consumes our reply is not answered twice.
         answered: tuple[object, ...] | None = None
-        # Output-quiescence completion (proposal 081): active only when a window is
+        # Output-quiescence completion: active only when a window is
         # configured and no idle marker competes for the turn-complete role. Track
         # the snapshot as of its last change and when that change happened, so a
         # non-changing repaint (cursor blink) does not keep resetting the window.

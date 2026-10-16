@@ -2,10 +2,11 @@
 
 This is the lowest layer of the CLI-driving SDK: it owns the child process and
 the master side of a pty, nothing more. It does not understand the screen, the
-output, or approvals — those live in later slices. Its single responsibility is
-to put bytes *into* the terminal at human cadence and hand raw bytes *out* of
-it, with a teardown discipline strict enough that a cancelled query leaves no
-orphaned child and no leaked file descriptor.
+output, or approvals — those live in :class:`Screen`, :class:`Parser`, and
+:class:`ApprovalHandler`. Its single responsibility is to put bytes *into* the
+terminal at human cadence and hand raw bytes *out* of it, with a teardown
+discipline strict enough that a cancelled query leaves no orphaned child and no
+leaked file descriptor.
 
 Why a pty rather than pipes: the ``claude`` CLI is a full-screen TUI. It only
 draws its interactive interface when stdin/stdout is a terminal, and it sizes
@@ -90,7 +91,7 @@ class PtyRunner:
         # Unbounded by design: this layer never blocks the child to apply
         # backpressure. A consumer that stops calling aread_chunk while the
         # child keeps emitting will grow this queue without bound — pacing
-        # reads is the caller's responsibility (the client slice's), not the
+        # reads is the caller's responsibility (AsyncClient's), not the
         # runner's.
         self._queue: asyncio.Queue[bytes] = asyncio.Queue()
         self._loop: asyncio.AbstractEventLoop | None = None

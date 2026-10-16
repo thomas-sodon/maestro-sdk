@@ -225,7 +225,7 @@ async def test_idle_marker_completes_turn_before_eof() -> None:
 
 
 # ---------------------------------------------------------------------------
-# layout-drift sentinel (proposal 075)
+# layout-drift sentinel
 
 
 async def test_idle_marker_match_leaves_drift_flag_unset() -> None:
@@ -303,7 +303,7 @@ async def test_complete_on_stops_stream_at_first_satisfying_chunk() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Output-quiescence turn completion (proposal 081)
+# Output-quiescence turn completion
 
 
 async def test_quiescence_completes_turn_as_resident_child() -> None:
@@ -481,7 +481,7 @@ async def test_quiescence_per_read_timeout_is_min_of_window_and_stream_idle(
 
 
 # ---------------------------------------------------------------------------
-# Spawn-pinned session id (proposal 081)
+# Spawn-pinned session id
 
 
 async def test_pinned_session_id_reaches_spawn_argv_and_result() -> None:
@@ -680,7 +680,7 @@ async def test_query_options_override_reaches_runner_factory() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Spawn-pinned session id (proposal 081)
+# Spawn-pinned session id
 
 
 async def test_query_session_id_pins_spawn_and_floors_result() -> None:

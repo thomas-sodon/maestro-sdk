@@ -1,8 +1,9 @@
 """Public data contract.
 
 These dataclasses are the contract between the user of :mod:`maestro_sdk` and
-the SDK. The fields are shaped to mirror :class:`maestro.sdk.QueryResult` so a
-future Maestro adapter is a thin re-pack rather than a translation layer.
+the SDK. The fields are shaped to mirror the ``QueryResult`` of Maestro's SDK
+wrapper (thomas-sodon/maestro-agent), so Maestro's ``cli_paced`` provider
+re-packs it directly rather than through a translation layer.
 """
 
 from __future__ import annotations
@@ -17,15 +18,14 @@ class QueryOptions:
     """Per-call options passed into :meth:`AsyncClient.query`.
 
     ``cwd`` is honoured today (the default runner factory spawns the CLI in it).
-    ``system`` is **not yet threaded** by :class:`AsyncClient`: turning it into a
-    CLI invocation is command-building, which is deferred to the Maestro selection
-    seam along with session continuity, so setting it currently has no effect.
+    ``system`` is not yet passed to the CLI by :class:`AsyncClient`; setting it
+    currently has no effect.
     Both timeouts bound the read stream (see :class:`AsyncClient`).
 
-    ``session_id`` pins a brand-new session to a caller-chosen id at spawn
-    (proposal 081): when set, a one-shot :meth:`AsyncClient.query` spawns
-    ``claude --session-id <id>`` so the id is known *a priori* — and that pinned id
-    is reported on :attr:`QueryResult.session_id` even with no on-screen
+    ``session_id`` pins a brand-new session to a caller-chosen id at spawn: when
+    set, a one-shot :meth:`AsyncClient.query` spawns ``claude --session-id <id>``
+    so the id is known *a priori* — and that pinned id is reported on
+    :attr:`QueryResult.session_id` even with no on-screen
     :attr:`~maestro_sdk.ClientMarkers.session_id` marker (the pinned id is the
     *floor*; a matching marker still overrides it for that turn). ``None`` (the
     default) leaves the spawn command and the result id exactly as before. For a
@@ -37,12 +37,13 @@ class QueryOptions:
     the accumulated answer text after each output snapshot. When it returns truthy,
     the read loop stops at that snapshot and the turn returns the text gathered so
     far without waiting for end-of-stream or the idle marker — the streaming
-    capability mirroring ``maestro.sdk``'s ``complete_on``, single-argument here
-    because a repainting TUI exposes only text (no message object).
+    capability mirroring the ``complete_on`` option of Maestro's SDK wrapper,
+    single-argument here because a repainting TUI exposes only text (no message
+    object).
 
-    ``idle_quiescence_seconds`` opts a turn into **output-quiescence completion**
-    (proposal 081): when set (and no :attr:`~maestro_sdk.ClientMarkers.idle` marker
-    competes for the role), a turn is complete once the rendered screen has stopped
+    ``idle_quiescence_seconds`` opts a turn into **output-quiescence completion**:
+    when set (and no :attr:`~maestro_sdk.ClientMarkers.idle` marker competes for
+    the role), a turn is complete once the rendered screen has stopped
     changing for this many seconds while the child is still alive — a layout-free
     done-signal for a persistent CLI that never EOFs and paints no matchable idle
     prefix. Quiescence is measured on the *rendered snapshot*
@@ -111,12 +112,12 @@ class QueryResult:
     ``session_id`` is the CLI-reported session id captured from the output when a
     :class:`~maestro_sdk.ClientMarkers.session_id` marker is configured, or the
     spawn-pinned id when one was pinned via :attr:`QueryOptions.session_id` /
-    ``AsyncClient.create_session(session_id=...)`` (proposal 081 — the pinned id is
-    the *floor*, so an on-screen marker still overrides it for that turn), or
+    ``AsyncClient.create_session(session_id=...)`` (the pinned id is the *floor*,
+    so an on-screen marker still overrides it for that turn), or
     ``None`` when neither is configured and none matched. A caller persists it to
     resume the conversation later (``AsyncClient.create_session(resume=...)``).
 
-    ``idle_marker_missed`` is the layout-drift sentinel (proposal 075): ``True``
+    ``idle_marker_missed`` is the layout-drift sentinel: ``True``
     when a non-empty :attr:`~maestro_sdk.ClientMarkers.idle` was configured but
     the turn still ended on EOF without the marker ever matching — the signature
     of a CLI upgrade silently changing the TUI layout. The turn itself is valid
@@ -165,8 +166,8 @@ class CostReport:
 class UsageReport:
     """Parsed ``/usage`` slash-command snapshot — subscription plan headroom.
 
-    Reports the rate-limit headroom a subscription login exposes (and neither
-    the API response nor the transcript sidecar does). Both fields are ``| None``
+    Reports the rate-limit headroom a subscription login exposes, which no API
+    response carries. Both fields are ``| None``
     so a non-subscription login or a layout miss degrades to "no reading" rather
     than a fabricated percentage. See :mod:`maestro_sdk.slash_probe`.
     """

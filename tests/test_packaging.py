@@ -1,10 +1,10 @@
 """Packaging-metadata smoke tests.
 
 Pins PEP 561 declarations so a future packaging refactor cannot silently drop
-them. Downstream type-checking (e.g. ``mypy maestro/`` over the
-``maestro.providers.cli_paced`` provider, which imports ``maestro_sdk`` real
-types) depends on the ``py.typed`` marker being present alongside the
-installed package.
+them. Downstream type-checking (e.g. of Maestro's ``cli_paced`` provider in
+thomas-sodon/maestro-agent, which imports ``maestro_sdk``'s real types)
+depends on the ``py.typed`` marker being present alongside the installed
+package.
 """
 
 from __future__ import annotations

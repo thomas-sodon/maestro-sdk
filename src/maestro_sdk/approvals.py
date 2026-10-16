@@ -2,7 +2,7 @@
 
 When the ``claude`` CLI wants to run a tool it pauses on a modal: a prompt line
 plus a numbered list of choices. A bulk-write SDK never sees this — it
-pre-authorises tools through the API — but the CLI-driven backend does, and must
+pre-authorises tools through the API — but a CLI-driving client does, and must
 decide *mid-stream* whether to type an approval or refuse.
 
 The trust posture is **deny-by-default**: a detected modal with no policy (or a
@@ -10,7 +10,7 @@ policy that returns ``False``) raises :class:`ApprovalRequiredError`, surfacing
 the decision to the operator rather than guessing. "Approve everything" is one
 opt-in predicate away (:func:`approve_all`), but it is never the default — the
 operator opts in per session. Sophisticated per-tool policies are out of scope
-here; this slice ships the seam and the safe default.
+here; this module ships the seam and the safe default.
 
 Detection is **mechanism + configuration**, the same split :class:`maestro_sdk.Parser`
 uses. The modal's layout — which line is the prompt, how options are numbered,
@@ -21,7 +21,7 @@ degenerate behaviour rather than a fragile guess at one CLI version's glyphs.
 
 This module is pure: no I/O, no sleep, no subprocess. Detection is a function of
 one screen snapshot; resolution is a function of the request and the policy. The
-client slice owns sending the returned keystrokes through the pty.
+:class:`AsyncClient` owns sending the returned keystrokes through the pty.
 """
 
 from __future__ import annotations
@@ -50,8 +50,9 @@ class ApprovalOption:
 class ApprovalRequest:
     """A tool-approval modal recognised on screen.
 
-    Passed to the ``auto_approve`` policy so a predicate can decide on the tool
-    name, the prompt, or the option labels; also attached to
+    Passed to the :data:`ApprovalPolicy` given to :class:`ApprovalHandler` as
+    ``policy`` so a predicate can decide on the tool name, the prompt, or the
+    option labels; also attached to
     :class:`ApprovalRequiredError` so a denied modal is debuggable without
     reattaching to the pty. ``screen`` is the raw snapshot it was read from.
     """
@@ -144,7 +145,7 @@ class ApprovalHandler:
     Construct with the layout :class:`ApprovalMarkers` and an optional
     :data:`ApprovalPolicy`. :meth:`detect` is pure recognition; :meth:`resolve`
     adds the policy decision and returns the keystrokes to type — or raises
-    :class:`ApprovalRequiredError`. The client slice calls :meth:`resolve` on each
+    :class:`ApprovalRequiredError`. :class:`AsyncClient` calls :meth:`resolve` on each
     fresh snapshot and, when it returns a non-empty string, sends those keystrokes
     through the pty; it must wait for the modal to clear before resolving again so
     a repaint of the same modal is not re-sent.

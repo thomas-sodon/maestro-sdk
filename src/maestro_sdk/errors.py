@@ -4,12 +4,14 @@ All exceptions carry an optional ``screen`` snapshot — the visible terminal
 buffer at the moment of failure — so failures are debuggable without having to
 reattach a debugger to the pty.
 
-Every error also carries a ``category`` string that mirrors
-``maestro.sdk.ErrorCategory`` *by name* — ``"rate_limit"``, ``"stale_session"``,
-``"cli_crash"``, ``"stream_stall"``, ``"timeout"``, ``"auth"``, ``"unknown"``. It
-is a plain string, not an import of that enum, so this package stays standalone:
-the Maestro selection seam re-packs ``MaestroSDKError.category`` into a real
-``ErrorCategory`` without this package ever depending on ``maestro``. Each class
+Every error also carries a ``category`` string that mirrors, *by name*, the
+``ErrorCategory`` enum of Maestro's SDK wrapper (thomas-sodon/maestro-agent) —
+``"rate_limit"``, ``"stale_session"``, ``"cli_crash"``, ``"stream_stall"``,
+``"timeout"``, ``"auth"``, ``"unknown"``. It is a plain string, not an import of
+that enum, so this package stays standalone: Maestro's ``cli_paced`` provider
+re-packs ``MaestroSDKError.category`` into a real ``ErrorCategory`` without this
+package ever depending on Maestro. Any other caller can map the strings onto
+its own retry taxonomy the same way. Each class
 declares its natural ``default_category``; a caller can override per-instance for
 the cases where the same class spans two categories (a startup timeout is
 ``"timeout"`` while a mid-stream stall is ``"stream_stall"``, both
@@ -37,7 +39,7 @@ class MaestroSDKError(Exception):
 
 
 class CLINotFoundError(MaestroSDKError):
-    """``which claude`` failed at startup.
+    """The configured CLI command could not be spawned (not found on ``PATH``).
 
     A missing CLI is an operator-facing credential/precondition failure, not a
     transient runtime error, so it maps to ``"auth"``.
@@ -63,8 +65,8 @@ class ApprovalRequiredError(MaestroSDKError):
     (or no policy was configured).
 
     Intentionally ``"unknown"``: approval-required is a deny-by-default control
-    signal surfaced to the operator, not a transient SDK failure, and Maestro's
-    taxonomy has no analogue to retry on.
+    signal surfaced to the operator, not a transient SDK failure, so there is
+    nothing for a caller's retry taxonomy to retry on.
     """
 
 

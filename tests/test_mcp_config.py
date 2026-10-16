@@ -1,9 +1,10 @@
-"""Tests for the ``--mcp-config`` JSON builder (proposal 061 Step 4).
+"""Tests for the ``--mcp-config`` JSON builder.
 
-The builder is the config-generation seam the ``cli_paced`` provider's tool
-adapter uses to point a spawned ``claude`` at Maestro-hosted MCP servers. It is
-pure JSON shaping — no transport, no ``mcp``/``maestro`` import — so these tests
-pin the wire shape, the include/omit rules, copy semantics, and serialisation.
+The builder is the config-generation seam a caller (Maestro's ``cli_paced``
+provider, for one) uses to point a spawned ``claude`` at caller-hosted MCP
+servers. It is pure JSON shaping — no transport, no ``mcp``/``maestro``
+import — so these tests pin the wire shape, the include/omit rules, copy
+semantics, and serialisation.
 """
 
 from __future__ import annotations

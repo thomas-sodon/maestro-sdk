@@ -61,8 +61,8 @@ def test_screen_snapshot_attached_when_passed() -> None:
 def test_default_category_mirrors_error_category_by_name(
     cls: type[MaestroSDKError], expected_category: str
 ) -> None:
-    # The category strings mirror maestro.sdk.ErrorCategory by name so the
-    # selection seam can re-pack them without this package importing maestro.
+    # The category strings mirror, by name, the ErrorCategory enum of Maestro's
+    # SDK wrapper, so a caller can re-pack them without this package importing it.
     assert cls("boom").category == expected_category
 
 
