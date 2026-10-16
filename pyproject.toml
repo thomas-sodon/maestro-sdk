@@ -1,0 +1,68 @@
+[project]
+name = "maestro_sdk"
+version = "0.0.1"
+description = "A Claude Code CLI-driving SDK that talks to claude as if it were a human user (paced keystrokes, realistic terminal, heartbeat)."
+requires-python = ">=3.14"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+    "pytest-timeout>=2.3",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# PEP 561: ship the inline type marker so downstreams (e.g. maestro's
+# providers.cli_paced provider) type-check against maestro_sdk's real types.
+[tool.setuptools.package-data]
+maestro_sdk = ["py.typed"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",   # line length handled by formatter
+    "SIM108", # ternary operator suggestions
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["maestro_sdk"]
+
+[tool.mypy]
+python_version = "3.14"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+addopts = "--cov=maestro_sdk --cov-report=term-missing --cov-fail-under=100 --durations=10"
+timeout = 5
+timeout_method = "thread"
+markers = [
+    "requires_claude_cli: integration test that spawns the real claude CLI (opt-in via RUN_CLAUDE_TESTS=1)",
+]
